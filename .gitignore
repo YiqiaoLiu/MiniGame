@@ -3,6 +3,9 @@
 *.lo
 *.o
 *.obj
+*.sln
+*.db
+*.vcxproj
 
 # Precompiled Headers
 *.gch
@@ -27,3 +30,4 @@
 *.exe
 *.out
 *.app
+*.filters
