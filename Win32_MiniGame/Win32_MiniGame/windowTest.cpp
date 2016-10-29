@@ -32,6 +32,20 @@ LRESULT CALLBACK WindowProcOfMiniGame(
 		OutputDebugStringA("WM_ACTIVATEAPP message received\n");
 		break;
 
+	case WM_PAINT:
+	{
+		PAINTSTRUCT paint;
+		HDC deviceContext = BeginPaint(Window, &paint);
+		int xPaint = paint.rcPaint.left;
+		int yPaint = paint.rcPaint.top;
+		int widthPaint = paint.rcPaint.right - paint.rcPaint.left;
+		int heightPaint = paint.rcPaint.bottom - paint.rcPaint.top;
+		PatBlt(deviceContext, xPaint, yPaint, widthPaint, heightPaint, BLACKNESS);
+
+		EndPaint(Window, &paint);
+	}
+		break;
+
 	default:
 		callbackResult = DefWindowProc(Window, Msg, wParam, lParam);
 		break;
@@ -80,6 +94,7 @@ int CALLBACK WinMain(
 			hInstance,
 			0);
 
+		// The message loop
 		if (windowHandle) {
 			for (;;) {
 				MSG Message;
