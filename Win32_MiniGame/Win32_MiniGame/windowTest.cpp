@@ -1,5 +1,11 @@
 #include <windows.h>
 
+#define local_presist static;
+#define global_variable static;
+#define internal static;
+
+global_variable bool isRunning = false;
+
 // Function handles all the message created by the window
 LRESULT CALLBACK WindowProcOfMiniGame(
 	HWND   Window,
@@ -13,7 +19,7 @@ LRESULT CALLBACK WindowProcOfMiniGame(
 	switch (Msg)
 	{
 	case WM_QUIT:
-		OutputDebugStringA("WM_QUIT message received\n");
+		isRunning = false;
 		break;
 
 	case WM_SIZE:
@@ -25,7 +31,7 @@ LRESULT CALLBACK WindowProcOfMiniGame(
 		break;
 
 	case WM_DESTROY:
-		OutputDebugStringA("WM_DESTROY message received\n");
+		isRunning = false;
 		break;
 
 	case WM_ACTIVATEAPP:
@@ -66,8 +72,8 @@ int CALLBACK WinMain(
 	UNREFERENCED_PARAMETER(lpCmdLine);
 	UNREFERENCED_PARAMETER(hPrevInstance);
 
-	//MessageBoxA(0, "This is the mini game", "Mini_Game", MB_OK | MB_ICONINFORMATION);
 	WNDCLASS windowsClass = {0};
+
 	// Setting the window's features
     windowsClass.style = CS_HREDRAW | CS_VREDRAW;						// Set the window's type
 	windowsClass.lpfnWndProc = WindowProcOfMiniGame;					// Pointer to the window procedure
@@ -96,7 +102,8 @@ int CALLBACK WinMain(
 
 		// The message loop
 		if (windowHandle) {
-			for (;;) {
+			isRunning = true;
+			while (isRunning) {
 				MSG Message;
 				BOOL messageResult = GetMessage(&Message, 0, 0, 0);
 				if (messageResult > 0) {
