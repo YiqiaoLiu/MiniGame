@@ -31,3 +31,7 @@
 *.out
 *.app
 *.filters
+*.tlog
+*.opendb
+*.enc
+*.idb
