@@ -1,11 +1,45 @@
 #include <windows.h>
 
-#define local_presist static;
-#define global_variable static;
-#define internal static;
+#define local_presist static
+#define global_variable static
+#define internal static
 
-global_variable bool isRunning = false;
+global_variable bool isRunning;
 
+global_variable HDC bitmapDeviceContext;
+global_variable BITMAPINFO bitmapInfo;
+global_variable void* bitmapMem;
+global_variable HBITMAP bitmapHandle;
+
+
+internal void Win32ResizeDIBSection(int Width, int Height) {
+	if (bitmapHandle) {
+		DeleteObject(bitmapHandle);
+	}
+	if (!bitmapDeviceContext) {
+		bitmapDeviceContext = CreateCompatibleDC(0);
+	}
+
+	bitmapInfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);					// Number of bytes required by the bmiheader structure
+	bitmapInfo.bmiHeader.biWidth = Width;									// The bitmap's width
+	bitmapInfo.bmiHeader.biHeight = Height;									// The bitmap's height
+	bitmapInfo.bmiHeader.biPlanes = 1;
+	bitmapInfo.bmiHeader.biBitCount = 32;									// Number of bits of each pixel
+	bitmapInfo.bmiHeader.biCompression = BI_RGB;							// The compression mode
+
+	CreateDIBSection(bitmapDeviceContext, &bitmapInfo, DIB_RGB_COLORS, &bitmapMem, 0, 0);
+}
+
+internal void Win32UpdateWindows(HDC deviceContext, int xSize,int ySize,int Width,int Height) {
+	StretchDIBits(deviceContext,
+		xSize, ySize, Width, Height,
+		xSize, ySize, Width, Height,
+		bitmapMem,
+		&bitmapInfo,
+		DIB_RGB_COLORS,
+		SRCCOPY
+		);
+}
 // Function handles all the message created by the window
 LRESULT CALLBACK WindowProcOfMiniGame(
 	HWND   Window,
@@ -19,11 +53,19 @@ LRESULT CALLBACK WindowProcOfMiniGame(
 	switch (Msg)
 	{
 	case WM_QUIT:
+	{
 		isRunning = false;
+	}
 		break;
 
 	case WM_SIZE:
-		OutputDebugStringA("WM_SIZE message received\n");
+	{
+		RECT clientRect;
+		GetClientRect(Window, &clientRect);
+		int Width = clientRect.right - clientRect.left;
+		int Height = clientRect.bottom - clientRect.top;
+		Win32ResizeDIBSection(Width, Height);
+	}
 		break;
 
 	case WM_CREATE:
@@ -31,8 +73,10 @@ LRESULT CALLBACK WindowProcOfMiniGame(
 		break;
 
 	case WM_DESTROY:
+	{
 		isRunning = false;
-		break;
+	}
+	break;
 
 	case WM_ACTIVATEAPP:
 		OutputDebugStringA("WM_ACTIVATEAPP message received\n");
@@ -47,7 +91,7 @@ LRESULT CALLBACK WindowProcOfMiniGame(
 		int widthPaint = paint.rcPaint.right - paint.rcPaint.left;
 		int heightPaint = paint.rcPaint.bottom - paint.rcPaint.top;
 		PatBlt(deviceContext, xPaint, yPaint, widthPaint, heightPaint, BLACKNESS);
-
+		Win32UpdateWindows(deviceContext, xPaint, yPaint, widthPaint, heightPaint);
 		EndPaint(Window, &paint);
 	}
 		break;
