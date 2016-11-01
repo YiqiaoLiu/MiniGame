@@ -151,6 +151,20 @@ LRESULT CALLBACK WindowProcOfMiniGame(
 	}
 		break;
 
+	case WM_SYSKEYDOWN:
+		break;
+	case WM_SYSKEYUP:
+		break;
+	case WM_KEYUP:
+		break;
+	case WM_KEYDOWN:
+	{
+		uint32 VKCode = wParam;
+		if (VKCode == 'A') {
+			OutputDebugStringA("A\n");
+		}
+	}
+	break;
 	default:
 		callbackResult = DefWindowProc(Window, Msg, wParam, lParam);
 		break;
