@@ -11,11 +11,11 @@ typedef int32_t int32;				// Signed 32 bit quantity
 typedef int64_t int64;				// Signed 64 bit quantity
 
 typedef uint8_t uint8;				// Unsigned 8 bit quantity
-typedef uint16_t uint16;				// Unsigned 16 bit quantity
-typedef uint32_t uint32;				// Unsigned 32 bit quantity
-typedef uint64_t uint64;				// Unsigned 64 bit quantity
+typedef uint16_t uint16;			// Unsigned 16 bit quantity
+typedef uint32_t uint32;			// Unsigned 32 bit quantity
+typedef uint64_t uint64;			// Unsigned 64 bit quantity
 
-struct win32GlobalBuffer {
+struct Win32BackBuffer {
 	 BITMAPINFO bitmapInfo;
 	 void* bitmapMem;
 	 int bitmapWidth;
@@ -24,10 +24,10 @@ struct win32GlobalBuffer {
 };
 
 global_variable bool isRunning;
-global_variable win32GlobalBuffer Buffer;
+global_variable Win32BackBuffer GlobalBackBuffer;
 
 
-internal void renderImage(win32GlobalBuffer Buffer, int xOffset, int yOffset) {
+internal void Win32RenderBufferImage(Win32BackBuffer Buffer, int xOffset, int yOffset) {
 	int Width = Buffer.bitmapWidth;
 	int Height = Buffer.bitmapHeight;
 	Buffer.bytesPerPixel = 4;
@@ -49,7 +49,7 @@ internal void renderImage(win32GlobalBuffer Buffer, int xOffset, int yOffset) {
 	} 
 }
 
-internal void Win32DisplayBuffer(win32GlobalBuffer *Buffer, int Width, int Height) {
+internal void Win32ResizeDIBSection(Win32BackBuffer *Buffer, int Width, int Height) {
 
 	if (Buffer->bitmapMem) {
 		VirtualFree(Buffer->bitmapMem, 0, MEM_RELEASE);
@@ -71,7 +71,7 @@ internal void Win32DisplayBuffer(win32GlobalBuffer *Buffer, int Width, int Heigh
 	//renderImage(0, 0);
 }
 
-internal void Win32UpdateWindows(win32GlobalBuffer Buffer, HDC deviceContext, RECT *windowSize, int xSize, int ySize, int Width, int Height) {
+internal void Win32UpdateWindows(Win32BackBuffer Buffer, HDC deviceContext, RECT *windowSize, int xSize, int ySize, int Width, int Height) {
 	int windowWidth = windowSize->right - windowSize->left;
 	int windowHeight = windowSize->bottom - windowSize->top;
 	StretchDIBits(deviceContext,
@@ -107,7 +107,7 @@ LRESULT CALLBACK WindowProcOfMiniGame(
 		GetClientRect(Window, &clientRect);
 		int Width = clientRect.right - clientRect.left;
 		int Height = clientRect.bottom - clientRect.top;
-		Win32DisplayBuffer(&Buffer, Width, Height);
+		Win32ResizeDIBSection(&GlobalBackBuffer, Width, Height);
 	}
 		break;
 
@@ -138,7 +138,7 @@ LRESULT CALLBACK WindowProcOfMiniGame(
 		RECT clientRect;
 		GetClientRect(Window, &clientRect);
 
-		Win32UpdateWindows(Buffer, deviceContext, &clientRect, xPaint, yPaint, widthPaint, heightPaint);
+		Win32UpdateWindows(GlobalBackBuffer, deviceContext, &clientRect, xPaint, yPaint, widthPaint, heightPaint);
 		EndPaint(Window, &paint);
 	}
 		break;
@@ -205,14 +205,14 @@ int CALLBACK WinMain(
 					TranslateMessage(&Message);
 					DispatchMessage(&Message);
 				}
-				renderImage(Buffer, xOffset, yOffset);
+				Win32RenderBufferImage(GlobalBackBuffer, xOffset, yOffset);
 
 				HDC deviceContext = GetDC(windowHandle);
 				RECT clientRect;
 				GetClientRect(windowHandle, &clientRect);
 				int windowWidth = clientRect.right - clientRect.left;
 				int windowHeight = clientRect.bottom - clientRect.top;
-				Win32UpdateWindows(Buffer, deviceContext, &clientRect, 0, 0, windowWidth, windowHeight);
+				Win32UpdateWindows(GlobalBackBuffer, deviceContext, &clientRect, 0, 0, windowWidth, windowHeight);
 
 				ReleaseDC(windowHandle, deviceContext);
 				xOffset++;
