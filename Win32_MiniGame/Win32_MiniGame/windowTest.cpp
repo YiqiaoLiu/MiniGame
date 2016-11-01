@@ -15,23 +15,27 @@ typedef uint16_t uint16;				// Unsigned 16 bit quantity
 typedef uint32_t uint32;				// Unsigned 32 bit quantity
 typedef uint64_t uint64;				// Unsigned 64 bit quantity
 
+struct win32GlobalBuffer {
+	 BITMAPINFO bitmapInfo;
+	 void* bitmapMem;
+	 int bitmapWidth;
+	 int bitmapHeight;
+	 int bytesPerPixel;
+};
 
 global_variable bool isRunning;
-
-global_variable BITMAPINFO bitmapInfo;
-global_variable void* bitmapMem;
-global_variable int bitmapWidth;
-global_variable int bitmapHeight;
-global_variable int bytesPerPixel = 4;
+global_variable win32GlobalBuffer Buffer;
 
 
-internal void renderImage(int xOffset, int yOffset) {
-	int Width = bitmapWidth;
-	int Height = bitmapHeight;
-	int Pitch = Width * bytesPerPixel;							// The number of byte of each column
+internal void renderImage(win32GlobalBuffer Buffer, int xOffset, int yOffset) {
+	int Width = Buffer.bitmapWidth;
+	int Height = Buffer.bitmapHeight;
+	Buffer.bytesPerPixel = 4;
 
-	uint8 *Row = (uint8 *)bitmapMem;							// uint8 represent 1 byte
-	for (int y = 0; y < bitmapHeight; y++) {
+	int Pitch = Width * Buffer.bytesPerPixel;					// The number of byte of each column
+
+	uint8 *Row = (uint8 *)Buffer.bitmapMem;						// uint8 represent 1 byte
+	for (int y = 0; y < Buffer.bitmapHeight; y++) {
 		uint32 *Pixel = (uint32 *)Row;							// 1 pixel contains 4 bytes -> uint32
 		for (int x = 0; x < Width; x++) {
 			uint8 Blue = (x + xOffset);
@@ -45,35 +49,36 @@ internal void renderImage(int xOffset, int yOffset) {
 	} 
 }
 
-internal void Win32ResizeDIBSection(int Width, int Height) {
+internal void Win32DisplayBuffer(win32GlobalBuffer *Buffer, int Width, int Height) {
 
-	if (bitmapMem) {
-		VirtualFree(bitmapMem, 0, MEM_RELEASE);
+	if (Buffer->bitmapMem) {
+		VirtualFree(Buffer->bitmapMem, 0, MEM_RELEASE);
 	}
 
-	bitmapWidth = Width;
-	bitmapHeight = Height;
+	Buffer->bitmapWidth = Width;
+	Buffer->bitmapHeight = Height;
 
-	bitmapInfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);					// Number of bytes required by the bmiheader structure
-	bitmapInfo.bmiHeader.biWidth = Width;									// The bitmap's width
-	bitmapInfo.bmiHeader.biHeight = -Height;								// The bitmap's height
-	bitmapInfo.bmiHeader.biPlanes = 1;
-	bitmapInfo.bmiHeader.biBitCount = 32;									// Number of bits of each pixel
-	bitmapInfo.bmiHeader.biCompression = BI_RGB;							// The compression mode
+	Buffer->bitmapInfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);					// Number of bytes required by the bmiheader structure
+	Buffer->bitmapInfo.bmiHeader.biWidth = Width;									// The bitmap's width
+	Buffer->bitmapInfo.bmiHeader.biHeight = -Height;								// The bitmap's height
+	Buffer->bitmapInfo.bmiHeader.biPlanes = 1;
+	Buffer->bitmapInfo.bmiHeader.biBitCount = 32;									// Number of bits of each pixel
+	Buffer->bitmapInfo.bmiHeader.biCompression = BI_RGB;							// The compression mode
+	Buffer->bytesPerPixel = 4;
 
-	int bitmapMemSize = bytesPerPixel * Width * Height;
-	bitmapMem = VirtualAlloc(0, bitmapMemSize, MEM_COMMIT, PAGE_READWRITE);
+	int bitmapMemSize = Buffer->bytesPerPixel * Width * Height;
+	Buffer->bitmapMem = VirtualAlloc(0, bitmapMemSize, MEM_COMMIT, PAGE_READWRITE);
 	//renderImage(0, 0);
 }
 
-internal void Win32UpdateWindows(HDC deviceContext, RECT *windowSize, int xSize, int ySize, int Width, int Height) {
+internal void Win32UpdateWindows(win32GlobalBuffer Buffer, HDC deviceContext, RECT *windowSize, int xSize, int ySize, int Width, int Height) {
 	int windowWidth = windowSize->right - windowSize->left;
 	int windowHeight = windowSize->bottom - windowSize->top;
 	StretchDIBits(deviceContext,
-		0, 0, bitmapWidth, bitmapHeight,
+		0, 0, Buffer.bitmapWidth, Buffer.bitmapHeight,
 		0, 0, windowWidth, windowHeight,
-		bitmapMem,
-		&bitmapInfo,
+		Buffer.bitmapMem,
+		&Buffer.bitmapInfo,
 		DIB_RGB_COLORS,
 		SRCCOPY
 		);
@@ -102,7 +107,7 @@ LRESULT CALLBACK WindowProcOfMiniGame(
 		GetClientRect(Window, &clientRect);
 		int Width = clientRect.right - clientRect.left;
 		int Height = clientRect.bottom - clientRect.top;
-		Win32ResizeDIBSection(Width, Height);
+		Win32DisplayBuffer(&Buffer, Width, Height);
 	}
 		break;
 
@@ -133,7 +138,7 @@ LRESULT CALLBACK WindowProcOfMiniGame(
 		RECT clientRect;
 		GetClientRect(Window, &clientRect);
 
-		Win32UpdateWindows(deviceContext, &clientRect, xPaint, yPaint, widthPaint, heightPaint);
+		Win32UpdateWindows(Buffer, deviceContext, &clientRect, xPaint, yPaint, widthPaint, heightPaint);
 		EndPaint(Window, &paint);
 	}
 		break;
@@ -200,14 +205,14 @@ int CALLBACK WinMain(
 					TranslateMessage(&Message);
 					DispatchMessage(&Message);
 				}
-				renderImage(xOffset, yOffset);
+				renderImage(Buffer, xOffset, yOffset);
 
 				HDC deviceContext = GetDC(windowHandle);
 				RECT clientRect;
 				GetClientRect(windowHandle, &clientRect);
 				int windowWidth = clientRect.right - clientRect.left;
 				int windowHeight = clientRect.bottom - clientRect.top;
-				Win32UpdateWindows(deviceContext, &clientRect, 0, 0, windowWidth, windowHeight);
+				Win32UpdateWindows(Buffer, deviceContext, &clientRect, 0, 0, windowWidth, windowHeight);
 
 				ReleaseDC(windowHandle, deviceContext);
 				xOffset++;
